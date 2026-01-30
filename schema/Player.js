@@ -19,6 +19,6 @@ type("number")(Player.prototype, "z");
 type("number")(Player.prototype, "rotY");
 type("number")(Player.prototype, "speed");
 type("boolean")(Player.prototype, "isSitting");
-type("number")(Player.prototype, "skinIndex"); // ✅ NEW
+type("int32")(Player.prototype, "skinIndex"); // ✅ NEW
 
 module.exports = { Player };
