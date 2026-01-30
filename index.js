@@ -5,17 +5,13 @@ const { WebSocketTransport } = require("@colyseus/ws-transport");
 const { State } = require("./schema/State");
 const { Player } = require("./schema/Player");
 
+// ---------------- ROOM ----------------
 class GameRoom extends Room {
-
   onCreate () {
     console.log("Room created");
-
     this.setState(new State());
-
-    // 🔥 REQUIRED: server tick (20 times/sec)
     this.setSimulationInterval(() => this.update(), 50);
 
-    // -------- MOVEMENT MESSAGE --------
     this.onMessage("move", (client, data) => {
       const player = this.state.players.get(client.sessionId);
       if (!player) return;
@@ -27,28 +23,22 @@ class GameRoom extends Room {
       player.speed = data.speed;
     });
 
-    // -------- SIT MESSAGE --------
     this.onMessage("sit", (client, isSitting) => {
       const player = this.state.players.get(client.sessionId);
       if (!player) return;
-
       player.isSitting = isSitting;
     });
 
-    // -------- SKIN MESSAGE --------
     this.onMessage("skin", (client, skinIndex) => {
       const player = this.state.players.get(client.sessionId);
       if (!player) return;
-
       player.skinIndex = skinIndex;
     });
   }
 
   onJoin (client) {
     console.log("JOIN:", client.sessionId);
-
-    const player = new Player();
-    this.state.players.set(client.sessionId, player);
+    this.state.players.set(client.sessionId, new Player());
   }
 
   onLeave (client) {
@@ -56,18 +46,21 @@ class GameRoom extends Room {
     this.state.players.delete(client.sessionId);
   }
 
-  update () {
-    // Server tick keeps schema patches flowing
-  }
+  update () {}
 }
 
-const server = new Server({
+// ---------------- SERVER ----------------
+const port = process.env.PORT || 2567;
+const httpServer = createServer();
+
+const gameServer = new Server({
   transport: new WebSocketTransport({
-    server: createServer()
+    server: httpServer
   })
 });
 
-server.define("game", GameRoom);
-server.listen(2567);
+gameServer.define("game", GameRoom);
 
-console.log("✅ Colyseus running at ws://localhost:2567");
+httpServer.listen(port, () => {
+  console.log(`✅ Colyseus running on port ${port}`);
+});
