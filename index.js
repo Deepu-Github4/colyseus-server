@@ -1,15 +1,23 @@
+// ================== IMPORTS ==================
+const express = require("express");
+const cors = require("cors");
+const http = require("http");
+
 const { Server, Room } = require("colyseus");
-const { createServer } = require("http");
 const { WebSocketTransport } = require("@colyseus/ws-transport");
 
 const { State } = require("./schema/State");
 const { Player } = require("./schema/Player");
 
-// ---------------- ROOM ----------------
+// ================== ROOM ==================
 class GameRoom extends Room {
+
   onCreate () {
     console.log("Room created");
+
     this.setState(new State());
+
+    // Server tick (20 FPS)
     this.setSimulationInterval(() => this.update(), 50);
 
     this.onMessage("move", (client, data) => {
@@ -46,21 +54,41 @@ class GameRoom extends Room {
     this.state.players.delete(client.sessionId);
   }
 
-  update () {}
+  update () {
+    // keep schema patches flowing
+  }
 }
 
-// ---------------- SERVER ----------------
-const port = process.env.PORT || 2567;
-const httpServer = createServer();
+// ================== SERVER ==================
+const PORT = process.env.PORT || 2567;
 
+// Express app (for CORS + matchmaking HTTP)
+const app = express();
+
+app.use(cors({
+  origin: "*",
+  credentials: true
+}));
+
+// Optional health check (Render likes this)
+app.get("/", (req, res) => {
+  res.send("Colyseus server is running");
+});
+
+// HTTP server
+const httpServer = http.createServer(app);
+
+// Colyseus server
 const gameServer = new Server({
   transport: new WebSocketTransport({
     server: httpServer
   })
 });
 
+// Register room
 gameServer.define("game", GameRoom);
 
-httpServer.listen(port, () => {
-  console.log(`✅ Colyseus running on port ${port}`);
+// Start server
+httpServer.listen(PORT, () => {
+  console.log(`✅ Colyseus running on port ${PORT}`);
 });
